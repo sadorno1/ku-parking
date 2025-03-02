@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, Button } from "react-native";
 import { collection, addDoc } from "firebase/firestore";
-import { db } from "../config/firebaseConfig";
+import { db } from "../../config/firebaseConfig";
 
 export default function ReportScreen({ route, navigation }) {
   const { permit } = route.params;
