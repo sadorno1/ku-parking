@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { View, Text, Button } from "react-native";
 import { collection, addDoc } from "firebase/firestore";
-import { db } from "../../config/firebaseConfig";
+import { db } from "../config/firebaseConfig";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
-export default function ReportScreen({ route, navigation }) {
-  const { permit } = route.params;
+export default function ReportScreen() {
+  const { permit } = useLocalSearchParams(); // Get permit from query params
   const [rating, setRating] = useState(3);
+  const router = useRouter(); // Use Expo Router for navigation
 
   const submitReport = async () => {
     try {
@@ -15,7 +17,7 @@ export default function ReportScreen({ route, navigation }) {
         timestamp: new Date(),
       });
       alert("Report submitted!");
-      navigation.navigate("RecommendationScreen", { permit: permit });
+      router.push(`/recommendation?permit=${permit}`); // Navigate to recommendation screen
     } catch (error) {
       console.error("Error submitting report:", error);
     }
