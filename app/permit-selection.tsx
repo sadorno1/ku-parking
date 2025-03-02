@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect, useState } from "react";
 
 export default function PermitSelection() {
   const router = useRouter();
@@ -11,9 +11,9 @@ export default function PermitSelection() {
     const checkStoredPermit = async () => {
       const storedPermit = await AsyncStorage.getItem("userPermit");
       if (storedPermit) {
-        router.replace(`/report?permit=${storedPermit}`); // Auto-redirect if stored
+        router.replace(`/permit-info?permit=${storedPermit}`); // 🚀 Auto-redirect if permit is saved
       } else {
-        setLoading(false);
+        setLoading(false); // Show selection screen if no permit is found
       }
     };
     checkStoredPermit();
@@ -21,7 +21,7 @@ export default function PermitSelection() {
 
   const selectPermit = async (permit: string) => {
     await AsyncStorage.setItem("userPermit", permit);
-    router.push(`/report?permit=${permit}`);
+    router.replace(`/permit-info?permit=${permit}`); // 🚀 Redirect immediately after selecting
   };
 
   if (loading) {
@@ -49,6 +49,9 @@ export default function PermitSelection() {
         </TouchableOpacity>
         <TouchableOpacity style={[styles.button, styles.yellow]} onPress={() => selectPermit("Yellow")}>
           <Text style={styles.buttonText}>Yellow</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.button, styles.green]} onPress={() => selectPermit("Green")}>
+          <Text style={styles.buttonText}>Green</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -101,4 +104,5 @@ const styles = StyleSheet.create({
   blue: { backgroundColor: "#005DAA" },
   red: { backgroundColor: "#D32F2F" },
   yellow: { backgroundColor: "#FBC02D" },
+  green: { backgroundColor: "#4CAF50" }, 
 });
