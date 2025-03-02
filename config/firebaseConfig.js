@@ -1,17 +1,18 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "your-app.firebaseapp.com",
-  projectId: "your-app",
-  storageBucket: "your-app.appspot.com",
-  messagingSenderId: "your-sender-id",
-  appId: "your-app-id"
+  apiKey: "AIzaSyBOfKj3P1_Uz0VN5QPsAO6kmMqz6G7jhEQ",
+  authDomain: "ku-parking.firebaseapp.com",
+  projectId: "ku-parking",
+  storageBucket: "ku-parking.firebasestorage.app",
+  messagingSenderId: "973149235141",
+  appId: "1:973149235141:web:881dee7f8c505c396b4dac"
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
 
 export { db };

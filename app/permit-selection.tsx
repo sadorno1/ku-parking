@@ -34,7 +34,7 @@ export default function PermitSelection() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>🎟 Select Your Parking Permit</Text>
+      <Text style={styles.title}>Select Your Parking Permit</Text>
       <Text style={styles.subtitle}>We'll remember your choice for next time.</Text>
 
       <View style={styles.buttonContainer}>
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
   },
-  gold: { backgroundColor: "#FFD700" },
+  gold: { backgroundColor: "#d4af37" },
   blue: { backgroundColor: "#005DAA" },
   red: { backgroundColor: "#D32F2F" },
   yellow: { backgroundColor: "#FBC02D" },
