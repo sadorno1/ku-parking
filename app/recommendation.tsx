@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, TextInput, StyleSheet, ActivityIndicator, FlatList } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { child, ref, get } from "firebase/database";
-import { db } from "./config/firebaseConfig"; // Ensure correct path
-import parkingLots from "./data/parkingLots"; // Ensure correct path
+import { db } from "./config/firebaseConfig"; 
+import parkingLots from "./data/parkingLots"; 
 import * as Linking from "expo-linking";
 
 type ParkingLot = {
@@ -23,7 +23,7 @@ export default function RecommendationScreen() {
   const [destination, setDestination] = useState<string>("");
   const [destinationCoords, setDestinationCoords] = useState<{ latitude: number; longitude: number } | null>(null);
 
-  // Function to fetch parking recommendations from Firebase
+  //function to fetch parking recommendations from Firebase
   const fetchRecommendations = async () => {
     if (!permit) {
       alert("❌ Permit type is missing.");
@@ -32,7 +32,7 @@ export default function RecommendationScreen() {
   
     setLoading(true);
     try {
-      const dbRef = ref(db); // Reference to Firebase Database
+      const dbRef = ref(db); //reference to Firebase Database
       const querySnapshot = await get(child(dbRef, "parking_reports"));
   
       if (!querySnapshot.exists()) {
@@ -44,31 +44,30 @@ export default function RecommendationScreen() {
       const reportsData = querySnapshot.val();
       const locationRatings: Record<string, number[]> = {};
   
-      // Process Firebase data
+      //process Firebase data
       Object.keys(reportsData).forEach((location) => {
         const reports = Object.values(reportsData[location]) as { rating: number }[];
-        const sanitizedLocation = location.replace(/[.#$[\]]/g, "_"); // Ensure valid Firebase key
+        const sanitizedLocation = location.replace(/[.#$[\]]/g, "_"); 
         locationRatings[sanitizedLocation] = reports.map((r) => r.rating).filter(Boolean);
       });
   
-      // Get the list of lots for the selected permit
+      //get the list of lots for the selected permit
       const permitLots: ParkingLot[] = parkingLots[permit as keyof typeof parkingLots] || [];
   
       // Update lots with average ratings
       const updatedLots: ParkingLot[] = permitLots.map((lot: ParkingLot) => {
-        const sanitizedLotName = lot.name.replace(/[.#$[\]]/g, "_"); // Ensure valid Firebase key
+        const sanitizedLotName = lot.name.replace(/[.#$[\]]/g, "_"); //ensure valid Firebase key
         const ratings = locationRatings[sanitizedLotName] || [];
         const avgRating = ratings.length > 0
           ? ratings.reduce((sum: number, r: number) => sum + r, 0) / ratings.length
-          : 3; // Default rating
+          : 3; //default rating
   
         return { ...lot, avgRating };
       });
   
-      // ✅ Correctly typed sort function
       updatedLots.sort((a: ParkingLot, b: ParkingLot) => (b.avgRating ?? 0) - (a.avgRating ?? 0));
   
-      setRecommendations(updatedLots.slice(0, 5)); // Keep only top 5 recommendations
+      setRecommendations(updatedLots.slice(0, 5)); //keep only top 5 recommendations
     } catch (error) {
       console.error("❌ Error fetching recommendations:", error);
     }
@@ -76,7 +75,7 @@ export default function RecommendationScreen() {
   };
   
 
-  // Function to fetch coordinates for a destination
+  //function to fetch coordinates for a destination
   const getDestinationCoordinates = async () => {
     if (!destination) {
       alert("❌ Please enter a destination.");
@@ -93,7 +92,7 @@ export default function RecommendationScreen() {
       if (data.results.length > 0) {
         const { lat, lng } = data.results[0].geometry.location;
         setDestinationCoords({ latitude: lat, longitude: lng });
-        fetchRecommendations(); // Fetch updated recommendations
+        fetchRecommendations(); //fetch updated recommendations
       } else {
         alert("❌ Could not find location. Try again.");
       }
@@ -103,7 +102,7 @@ export default function RecommendationScreen() {
     setLoading(false);
   };
 
-  // Open Google Maps for directions
+  //open Google Maps for directions
   const openGoogleMaps = (latitude: number, longitude: number) => {
     const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
     Linking.openURL(url);

@@ -2,17 +2,17 @@ import React from "react";
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import parkingLots from "./data/parkingLots"; // Import parking lot data
+import parkingLots from "./data/parkingLots"; 
 
 export default function PermitInfo() {
-  const { permit } = useLocalSearchParams(); // Get permit from query params
-  const router = useRouter(); // For navigation
+  const { permit } = useLocalSearchParams(); 
+  const router = useRouter(); 
   const lots = parkingLots[permit as keyof typeof parkingLots] || [];
 
-  // Function to change permit
+  //function to change permit
   const changePermit = async () => {
-    await AsyncStorage.removeItem("userPermit"); // Remove saved permit
-    router.replace("/permit-selection"); // Redirect to permit selection
+    await AsyncStorage.removeItem("userPermit"); 
+    router.replace("/permit-selection"); 
   };
 
   return (

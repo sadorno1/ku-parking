@@ -6,13 +6,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 export default function Index() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [permit, setPermit] = useState<string | null>(null); // ✅ Fixed useState type
+  const [permit, setPermit] = useState<string | null>(null); 
 
   useEffect(() => {
     const checkStoredPermit = async () => {
       const storedPermit = await AsyncStorage.getItem("userPermit");
       if (storedPermit) {
-        setPermit(storedPermit); // ✅ No more TypeScript error
+        setPermit(storedPermit); 
       }
       setLoading(false);
     };
@@ -21,17 +21,17 @@ export default function Index() {
 
   const handleRecommendation = () => {
     if (permit) {
-      router.push(`/recommendation?permit=${permit}`); // 🚀 Navigate with stored permit
+      router.push(`/recommendation?permit=${permit}`); 
     } else {
-      router.push("/permit-selection"); // 🔄 If no permit, ask them to choose one
+      router.push("/permit-selection");
     }
   };
 
   const handleReport = () => {
     if (permit) {
-      router.push(`/permit-info?permit=${permit}`); // 🚀 Navigate to parking info
+      router.push(`/permit-info?permit=${permit}`); //go to parking info
     } else {
-      router.push("/permit-selection"); // 🔄 If no permit, ask them to choose one
+      router.push("/permit-selection"); //if no permit, ask them to choose one
     }
   };
 
@@ -99,6 +99,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
   },
-  blue: { backgroundColor: "#005DAA" }, // Recommend Button
-  red: { backgroundColor: "#D32F2F" }, // Report Button
+  blue: { backgroundColor: "#005DAA" }, 
+  red: { backgroundColor: "#D32F2F" }, 
 });

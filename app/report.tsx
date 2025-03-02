@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getDatabase, ref, push } from "firebase/database";
-import { db } from "./config/firebaseConfig"; // ✅ Ensure this exists
+import { db } from "./config/firebaseConfig"; 
 
 export default function ReportScreen() {
   const router = useRouter();
@@ -16,12 +16,11 @@ export default function ReportScreen() {
     }
 
     try {
-      const dbRef = getDatabase(); // ✅ Get Database instance
+      const dbRef = getDatabase(); 
       const sanitizedLocation = Array.isArray(location)
         ? location.join("_")
-        : location.replace(/[.#$[\]]/g, "_"); // ✅ Fix invalid Firebase keys
+        : location.replace(/[.#$[\]]/g, "_"); 
 
-      // ✅ Push rating data to Realtime Database
       await push(ref(dbRef, `parking_reports/${sanitizedLocation}`), {
         permit,
         rating,
@@ -29,7 +28,7 @@ export default function ReportScreen() {
       });
 
       alert("✅ Submission successful!");
-      router.replace("/"); // ✅ Redirect to homepage after submission
+      router.replace("/");
     } catch (error) {
       console.error("Error submitting report:", error);
       alert("❌ Failed to submit report.");

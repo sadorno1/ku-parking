@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase } from "firebase/database";
 
-// Your web app's Firebase configuration
+//Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyBOfKj3P1_Uz0VN5QPsAO6kmMqz6G7jhEQ",
   authDomain: "ku-parking.firebaseapp.com",

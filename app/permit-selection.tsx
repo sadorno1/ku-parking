@@ -11,9 +11,9 @@ export default function PermitSelection() {
     const checkStoredPermit = async () => {
       const storedPermit = await AsyncStorage.getItem("userPermit");
       if (storedPermit) {
-        router.replace(`/permit-info?permit=${storedPermit}`); // 🚀 Auto-redirect if permit is saved
+        router.replace(`/permit-info?permit=${storedPermit}`); 
       } else {
-        setLoading(false); // Show selection screen if no permit is found
+        setLoading(false); //show selection screen if no permit is found
       }
     };
     checkStoredPermit();
@@ -21,7 +21,7 @@ export default function PermitSelection() {
 
   const selectPermit = async (permit: string) => {
     await AsyncStorage.setItem("userPermit", permit);
-    router.replace(`/permit-info?permit=${permit}`); // 🚀 Redirect immediately after selecting
+    router.replace(`/permit-info?permit=${permit}`);
   };
 
   if (loading) {
