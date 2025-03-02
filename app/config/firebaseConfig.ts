@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { getDatabase } from "firebase/database";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -11,8 +11,6 @@ const firebaseConfig = {
   appId: "1:973149235141:web:881dee7f8c505c396b4dac"
 };
 
-// Initialize Firebase
-const firebaseApp = initializeApp(firebaseConfig);
-const db = getFirestore(firebaseApp);
 
-export { db };
+const firebaseApp = initializeApp(firebaseConfig);
+export const db = getDatabase(firebaseApp);

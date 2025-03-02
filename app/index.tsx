@@ -45,7 +45,7 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>🚗 Welcome to KU Parking</Text>
+      <Text style={styles.title}>Welcome to KU Parking</Text>
       <Text style={styles.subtitle}>Find the best parking lot or report availability.</Text>
 
       {/* Recommend Button */}

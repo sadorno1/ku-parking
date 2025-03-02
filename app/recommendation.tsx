@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, FlatList } from "react-native";
+import { View, Text, TouchableOpacity, TextInput, StyleSheet, ActivityIndicator, FlatList } from "react-native";
 import { useLocalSearchParams } from "expo-router";
-import { db } from "../config/firebaseConfig";
-import { collection, getDocs } from "firebase/firestore";
-import parkingLots from "./data/parkingLots";
-import * as Location from "expo-location";
+import { child, ref, get } from "firebase/database";
+import { db } from "./config/firebaseConfig"; // Ensure correct path
+import parkingLots from "./data/parkingLots"; // Ensure correct path
 import * as Linking from "expo-linking";
 
 type ParkingLot = {
@@ -20,78 +19,91 @@ type ParkingLot = {
 export default function RecommendationScreen() {
   const { permit } = useLocalSearchParams();
   const [recommendations, setRecommendations] = useState<ParkingLot[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [userLocation, setUserLocation] = useState<Location.LocationObjectCoords | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [destination, setDestination] = useState<string>("");
+  const [destinationCoords, setDestinationCoords] = useState<{ latitude: number; longitude: number } | null>(null);
 
-  useEffect(() => {
-    const fetchRecommendations = async () => {
-      try {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-          console.warn("Location permission denied");
-        } else {
-          const location = await Location.getCurrentPositionAsync({});
-          setUserLocation(location.coords);
-        }
-
-        // Fetch parking reports
-        const querySnapshot = await getDocs(collection(db, "parking_reports"));
-        const reports = querySnapshot.docs.map((doc) => doc.data());
-
-        // Get lots for the selected permit
-        const permitLots: ParkingLot[] = parkingLots[permit as keyof typeof parkingLots] || [];
-
-        // Calculate availability rating & distance for each lot
-        const rankedLots = permitLots.map((lot: ParkingLot) => {
-          const reportsForLot = reports.filter((r) => r.location === lot.name);
-          const avgRating =
-            reportsForLot.length > 0
-              ? reportsForLot.reduce((sum, r) => sum + r.rating, 0) / reportsForLot.length
-              : 3; // Default rating if no reports exist
-
-          let distance: number | null = null;
-          if (userLocation) {
-            const R = 6371; // Radius of Earth in km
-            const dLat = ((lot.latitude - userLocation.latitude) * Math.PI) / 180;
-            const dLon = ((lot.longitude - userLocation.longitude) * Math.PI) / 180;
-            const a =
-              Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos((userLocation.latitude * Math.PI) / 180) *
-                Math.cos((lot.latitude * Math.PI) / 180) *
-                Math.sin(dLon / 2) *
-                Math.sin(dLon / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            distance = R * c; // Distance in km
-          }
-
-          return { ...lot, avgRating, distance: distance ?? Infinity }; // Ensure distance is never undefined
-        });
-
-        // ✅ Fixed Sorting Function
-        rankedLots.sort((a: ParkingLot, b: ParkingLot) => {
-          if ((b.avgRating ?? 0) !== (a.avgRating ?? 0)) return (b.avgRating ?? 0) - (a.avgRating ?? 0); // Highest rating first
-          return (a.distance ?? Infinity) - (b.distance ?? Infinity); // Closest first, undefined distances last
-        });
-
-        setRecommendations(rankedLots.slice(0, 5));
-      } catch (error) {
-        console.error("Error fetching recommendations:", error);
+  // Function to fetch parking recommendations from Firebase
+  const fetchRecommendations = async () => {
+    if (!permit) {
+      alert("❌ Permit type is missing.");
+      return;
+    }
+  
+    setLoading(true);
+    try {
+      const dbRef = ref(db); // Reference to Firebase Database
+      const querySnapshot = await get(child(dbRef, "parking_reports"));
+  
+      if (!querySnapshot.exists()) {
+        console.warn("⚠️ No parking reports found.");
+        setLoading(false);
+        return;
       }
-      setLoading(false);
-    };
+  
+      const reportsData = querySnapshot.val();
+      const locationRatings: Record<string, number[]> = {};
+  
+      // Process Firebase data
+      Object.keys(reportsData).forEach((location) => {
+        const reports = Object.values(reportsData[location]) as { rating: number }[];
+        const sanitizedLocation = location.replace(/[.#$[\]]/g, "_"); // Ensure valid Firebase key
+        locationRatings[sanitizedLocation] = reports.map((r) => r.rating).filter(Boolean);
+      });
+  
+      // Get the list of lots for the selected permit
+      const permitLots: ParkingLot[] = parkingLots[permit as keyof typeof parkingLots] || [];
+  
+      // Update lots with average ratings
+      const updatedLots: ParkingLot[] = permitLots.map((lot: ParkingLot) => {
+        const sanitizedLotName = lot.name.replace(/[.#$[\]]/g, "_"); // Ensure valid Firebase key
+        const ratings = locationRatings[sanitizedLotName] || [];
+        const avgRating = ratings.length > 0
+          ? ratings.reduce((sum: number, r: number) => sum + r, 0) / ratings.length
+          : 3; // Default rating
+  
+        return { ...lot, avgRating };
+      });
+  
+      // ✅ Correctly typed sort function
+      updatedLots.sort((a: ParkingLot, b: ParkingLot) => (b.avgRating ?? 0) - (a.avgRating ?? 0));
+  
+      setRecommendations(updatedLots.slice(0, 5)); // Keep only top 5 recommendations
+    } catch (error) {
+      console.error("❌ Error fetching recommendations:", error);
+    }
+    setLoading(false);
+  };
+  
 
-    fetchRecommendations();
-  }, [permit]);
+  // Function to fetch coordinates for a destination
+  const getDestinationCoordinates = async () => {
+    if (!destination) {
+      alert("❌ Please enter a destination.");
+      return;
+    }
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#005DAA" />
-        <Text>Finding the best parking options...</Text>
-      </View>
-    );
-  }
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(destination)}&key=blablah`
+      );
+      const data = await response.json();
 
+      if (data.results.length > 0) {
+        const { lat, lng } = data.results[0].geometry.location;
+        setDestinationCoords({ latitude: lat, longitude: lng });
+        fetchRecommendations(); // Fetch updated recommendations
+      } else {
+        alert("❌ Could not find location. Try again.");
+      }
+    } catch (error) {
+      console.error("❌ Error fetching destination coordinates:", error);
+    }
+    setLoading(false);
+  };
+
+  // Open Google Maps for directions
   const openGoogleMaps = (latitude: number, longitude: number) => {
     const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
     Linking.openURL(url);
@@ -99,29 +111,54 @@ export default function RecommendationScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>🚗 Top 5 Parking Options for {permit} Permit</Text>
+      <Text style={styles.title}>🚗 Find the Best Parking for {permit} Permit</Text>
 
-      <FlatList
-        data={recommendations}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item, index }) => (
-          <View style={styles.lotCard}>
-            <Text style={styles.lotRank}>#{index + 1}</Text>
-            <Text style={styles.lotName}>{item.name}</Text>
-            <Text style={styles.lotLocation}>📍 {item.location}</Text>
-            <Text style={styles.lotRating}>⭐ {item.avgRating?.toFixed(1)}</Text>
-            
-            {/* ✅ Fixed distance handling */}
-            <Text style={styles.lotDistance}>
-              📏 {item.distance !== undefined && item.distance !== Infinity ? `${item.distance.toFixed(2)} km away` : "Distance unavailable"}
-            </Text>
-
-            <TouchableOpacity style={styles.directionButton} onPress={() => openGoogleMaps(item.latitude, item.longitude)}>
-              <Text style={styles.buttonText}>Get Directions</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+      {/* Destination Input */}
+      <TextInput
+        style={styles.input}
+        placeholder="Enter your destination"
+        value={destination}
+        onChangeText={setDestination}
       />
+
+      <TouchableOpacity style={styles.searchButton} onPress={getDestinationCoordinates}>
+        <Text style={styles.buttonText}>🔍 Search Destination</Text>
+      </TouchableOpacity>
+
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#005DAA" />
+          <Text style={styles.loadingText}>Finding the best parking options...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={recommendations}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item, index }) => (
+            <View style={styles.lotCard}>
+              <Text style={styles.lotRank}>#{index + 1}</Text>
+              <Text style={styles.lotName}>{item.name}</Text>
+              <Text style={styles.lotAddress}>📍 {item.location}</Text>
+              <Text style={styles.lotRating}>⭐ {item.avgRating?.toFixed(1)}</Text>
+              <TouchableOpacity style={styles.directionButton} onPress={() => openGoogleMaps(item.latitude, item.longitude)}>
+                <Text style={styles.buttonText}>Get Directions</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        />
+      )}
+
+      {/* Reset Button */}
+      <TouchableOpacity
+        style={styles.resetButton}
+        onPress={() => {
+          setDestination("");
+          setDestinationCoords(null);
+          setRecommendations([]);
+        }}
+      >
+        <Text style={styles.resetButtonText}>🔄 Reset & Enter New Destination</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -131,7 +168,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: "#F8F9FA",
-    justifyContent: "center",
   },
   title: {
     fontSize: 22,
@@ -140,52 +176,62 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     textAlign: "center",
   },
-  lotCard: {
-    backgroundColor: "#fff",
-    padding: 15,
-    marginVertical: 8,
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  lotRank: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#D32F2F",
-  },
-  lotName: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#333",
-  },
-  lotLocation: {
-    fontSize: 16,
-    color: "#777",
-  },
-  lotRating: {
-    fontSize: 16,
-    color: "#FFA500",
-    fontWeight: "bold",
-  },
-  lotDistance: {
-    fontSize: 14,
-    color: "#555",
-  },
-  directionButton: {
-    marginTop: 10,
-    backgroundColor: "#005DAA",
-    paddingVertical: 8,
-    paddingHorizontal: 15,
+  input: {
+    borderWidth: 1,
+    borderColor: "#CCC",
     borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+    backgroundColor: "#FFF",
+  },
+  searchButton: {
+    backgroundColor: "#005DAA",
+    paddingVertical: 12,
     alignItems: "center",
-    justifyContent: "center",
+    borderRadius: 8,
+    marginBottom: 15,
   },
   buttonText: {
     color: "white",
     fontSize: 16,
     fontWeight: "600",
   },
+  loadingContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 18,
+    color: "#555",
+    marginTop: 10,
+  },
+  lotCard: {
+    backgroundColor: "#fff",
+    padding: 15,
+    marginVertical: 8,
+    borderRadius: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  lotRank: { fontSize: 18, fontWeight: "bold", color: "#D32F2F" },
+  lotName: { fontSize: 20, fontWeight: "600", color: "#333" },
+  lotAddress: { fontSize: 14, color: "#555" },
+  lotRating: { fontSize: 16, color: "#FFA500", fontWeight: "bold" },
+  directionButton: {
+    backgroundColor: "#005DAA",
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 10,
+    alignItems: "center",
+  },
+  resetButton: {
+    marginTop: 20,
+    backgroundColor: "#FFA500",
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  resetButtonText: { color: "white", fontSize: 16, fontWeight: "600" },
 });
+

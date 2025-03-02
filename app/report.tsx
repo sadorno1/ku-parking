@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { collection, addDoc } from "firebase/firestore";
-import { db } from "../config/firebaseConfig"; // Ensure this exists
+import { getDatabase, ref, push } from "firebase/database";
+import { db } from "./config/firebaseConfig"; // ✅ Ensure this exists
 
 export default function ReportScreen() {
   const router = useRouter();
-  const { permit, location } = useLocalSearchParams(); // Get params from navigation
-  const [rating, setRating] = useState<number | null>(null); // ✅ Fixed useState type
+  const { permit, location } = useLocalSearchParams();
+  const [rating, setRating] = useState<number | null>(null);
 
   const submitReport = async () => {
     if (rating === null) {
@@ -16,14 +16,20 @@ export default function ReportScreen() {
     }
 
     try {
-      await addDoc(collection(db, "parking_reports"), {
-        permit: permit,
-        location: location,
-        rating: rating,
-        timestamp: new Date(),
+      const dbRef = getDatabase(); // ✅ Get Database instance
+      const sanitizedLocation = Array.isArray(location)
+        ? location.join("_")
+        : location.replace(/[.#$[\]]/g, "_"); // ✅ Fix invalid Firebase keys
+
+      // ✅ Push rating data to Realtime Database
+      await push(ref(dbRef, `parking_reports/${sanitizedLocation}`), {
+        permit,
+        rating,
+        timestamp: new Date().toISOString(),
       });
-      alert("✅ Report submitted successfully!");
-      router.back(); // Go back after submitting
+
+      alert("✅ Submission successful!");
+      router.replace("/"); // ✅ Redirect to homepage after submission
     } catch (error) {
       console.error("Error submitting report:", error);
       alert("❌ Failed to submit report.");
@@ -44,7 +50,7 @@ export default function ReportScreen() {
           <TouchableOpacity
             key={num}
             style={[styles.ratingButton, rating === num && styles.selectedRating]}
-            onPress={() => setRating(num)} // ✅ No more TypeScript error
+            onPress={() => setRating(num)}
           >
             <Text style={styles.buttonText}>{num}</Text>
           </TouchableOpacity>
@@ -101,7 +107,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   selectedRating: {
-    backgroundColor: "#005DAA", // Highlight selected option
+    backgroundColor: "#005DAA",
   },
   buttonText: {
     color: "white",
